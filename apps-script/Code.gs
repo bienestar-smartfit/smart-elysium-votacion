@@ -4,7 +4,8 @@
  *
  * Hojas que usa (se crean solas la primera vez):
  *   Votos     — una fila por persona y categoría (se reemplaza si cambia el voto)
- *   Personas  — lista opcional de nominables: Nombre | Correo | Área
+ *   Votados   — personas que se pueden elegir: Nombre | Correo | Área | Origen
+ *               (también acepta la pestaña con su nombre anterior, "Personas")
  *   Config    — estado de la votación, organizadores y resultados publicados
  */
 
@@ -48,7 +49,8 @@ var CATS = [
 ];
 
 var SHEET_VOTES = "Votos";
-var SHEET_PEOPLE = "Personas";
+var SHEET_PEOPLE = "Votados";        // lista de personas que se pueden elegir
+var SHEET_PEOPLE_OLD = "Personas";   // nombre anterior de la pestaña (se sigue aceptando)
 var SHEET_CONFIG = "Config";
 var VOTE_HEADERS = ["Fecha", "Votante", "CategoriaID", "Categoria", "NominadoCorreo", "NominadoNombre", "Ciudad"];
 var CITIES = ["Medellín", "Bogotá"];
@@ -115,6 +117,7 @@ function submitVotes(picks, city) {
     if (readMine_(me).sent) throw new Error("Ya enviaste tus votos. No se pueden cambiar.");
     var sh = sheet_(SHEET_VOTES);
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    addNewPeople_(rows);
   } finally {
     lock.releaseLock();
   }
@@ -183,9 +186,9 @@ function ensureSheets_() {
   } else if (String(v.getRange(1, 7).getValue()) !== "Ciudad") {
     v.getRange(1, 7).setValue("Ciudad");
   }
-  if (!ss.getSheetByName(SHEET_PEOPLE)) {
+  if (!peopleSheet_()) {
     var p = ss.insertSheet(SHEET_PEOPLE);
-    p.appendRow(["Nombre", "Correo", "Área"]);
+    p.appendRow(["Nombre", "Correo", "Área", "Origen"]);
     p.setFrozenRows(1);
   }
   if (!ss.getSheetByName(SHEET_CONFIG)) {
@@ -266,12 +269,45 @@ function readMine_(me) {
   return { picks: picks, city: city, sent: sent };
 }
 
+function peopleSheet_() {
+  return ss_().getSheetByName(SHEET_PEOPLE) || ss_().getSheetByName(SHEET_PEOPLE_OLD);
+}
+
+/** Lista actualizada de personas; la página la vuelve a pedir cada minuto. */
+function getPeople() {
+  requireVoter_();
+  return readPeople_();
+}
+
+/** Agrega a la pestaña de votados los nombres nuevos que escribieron los votantes. */
+function addNewPeople_(rows) {
+  var sh = peopleSheet_();
+  var known = {};
+  readPeople_().forEach(function (p) { known[normName_(p.name)] = true; });
+  var add = [];
+  rows.forEach(function (r) {
+    var key = normName_(r[5]);
+    if (!r[4] && key && !known[key]) { known[key] = true; add.push([r[5], "", "", "Agregado al votar"]); }
+  });
+  if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, 4).setValues(add);
+}
+
 function readPeople_() {
-  var values = sheet_(SHEET_PEOPLE).getDataRange().getValues();
-  var out = [];
-  for (var i = 1; i < values.length; i++) {
-    var name = String(values[i][0] || "").trim();
-    if (name) out.push({ name: name, email: normEmail_(values[i][1]), area: String(values[i][2] || "").trim() });
+  var sh = peopleSheet_();
+  if (!sh) return [];
+  var values = sh.getDataRange().getValues();
+  var out = [], seen = {};
+  for (var i = 0; i < values.length; i++) {
+    var name = String(values[i][0] || "").replace(/\s+/g, " ").trim();
+    if (!name) continue;
+    if (i === 0 && /nombre|name|colaborador/i.test(name)) continue;   // fila de títulos
+    var key = normName_(name);
+    if (seen[key]) continue;
+    seen[key] = true;
+    var b = String(values[i][1] || "").trim(), c = String(values[i][2] || "").trim();
+    var email = b.indexOf("@") > 0 ? normEmail_(b) : "";
+    var area = email ? c : (b && b.indexOf("@") < 0 ? b : c);
+    out.push({ name: name, email: email, area: area.slice(0, 60) });
   }
   return out;
 }

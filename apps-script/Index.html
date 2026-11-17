@@ -80,6 +80,7 @@ h1{margin:0;line-height:0}
 .opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:500 14px var(--body);padding:9px 10px;border:0;border-radius:8px;background:transparent;color:var(--tinta);cursor:pointer}
 .opt:hover,.opt.active{background:var(--oro-suave)}
 .opt[disabled]{opacity:.5;cursor:default}
+.opt-hint{padding:8px 10px;font-size:13px;color:var(--gris)}
 .opt small{color:var(--gris);margin-left:auto;font-size:12px}
 .who{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--oro);min-width:0}
 .who span{flex:1;min-width:0;font-weight:800;overflow-wrap:anywhere}
@@ -304,7 +305,7 @@ function openPicker(c,v,focus=true){
   v.append(lab);
   const wrap=el("div","picker");
   const inp=document.createElement("input");inp.id="pick-"+c.id;inp.type="text";inp.autocomplete="off";
-  inp.placeholder="Escribe un nombre…";inp.setAttribute("aria-label","Nominado para "+c.n);
+  inp.placeholder="Escribe el nombre de la persona…";inp.setAttribute("aria-label","Nominado para "+c.n);
   const list=el("div","list");list.hidden=true;list.setAttribute("role","listbox");
   wrap.append(inp,list);v.append(wrap);
   if(draft[c.id]){const cancel=el("button","link","Cancelar");cancel.type="button";cancel.onclick=()=>{v.dataset.mode="";renderVote(c);};v.append(cancel);}
@@ -312,7 +313,10 @@ function openPicker(c,v,focus=true){
   const choose=pick=>{v.dataset.mode="";inp.blur();draft[c.id]=pick;confirming=false;document.getElementById("card-"+c.id).classList.remove("missing");if(!document.querySelector(".card.missing"))notice("");renderAll();};
   const draw=()=>{
     const q=inp.value,nq=norm(q);list.replaceChildren();opts=[];active=-1;
-    const hits=nq?people.filter(p=>norm(p.name).includes(nq)||norm(p.area).includes(nq)).slice(0,8):(people.length<=8?people:[]);
+    const words=nq.split(/\s+/).filter(Boolean);
+    const score=p=>{const n=norm(p.name),a=norm(p.area);if(!words.every(w=>n.includes(w)||a.includes(w)))return -1;return n.startsWith(nq)?0:(n.split(/\s+/).some(t=>t.startsWith(words[0]))?1:2);};
+    const hits=(nq?people.map(p=>[score(p),p]).filter(x=>x[0]>=0).sort((x,y)=>x[0]-y[0]||x[1].name.localeCompare(y[1].name)).map(x=>x[1]):people.slice().sort((x,y)=>x.name.localeCompare(y.name))).slice(0,10);
+    if(!hits.length&&nq&&people.length){list.append(el("div","opt-hint","No encontramos «"+q.trim()+"» en la lista."));}
     hits.forEach(h=>{
       const b=el("button","opt");b.type="button";b.setAttribute("role","option");
       b.append(el("span",null,h.name));if(h.area)b.append(el("small",null,h.area));
@@ -325,7 +329,7 @@ function openPicker(c,v,focus=true){
     const exact=people.some(p=>norm(p.name)===nq);
     if(q.trim().length>=2&&!exact){
       const b=el("button","opt");b.type="button";b.setAttribute("role","option");
-      b.append(el("span",null,"Elegir a «"+q.trim()+"»"),el("small",null,people.length?"no aparece en la lista":""));
+      b.append(el("span",null,"Agregar a «"+q.trim()+"»"),el("small",null,"nombre nuevo"));
       b.onmousedown=e=>e.preventDefault();
       b.onclick=()=>choose({name:q.trim().slice(0,80),email:""});
       list.append(b);opts.push(b);
@@ -333,7 +337,7 @@ function openPicker(c,v,focus=true){
     list.hidden=!list.children.length;
   };
   inp.addEventListener("input",draw);
-  inp.addEventListener("focus",draw);
+  inp.addEventListener("focus",()=>{draw();refreshPeople();});
   inp.addEventListener("blur",()=>setTimeout(()=>{list.hidden=true;},120));
   inp.addEventListener("keydown",e=>{
     if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!opts.length)return;
@@ -343,6 +347,19 @@ function openPicker(c,v,focus=true){
   });
   if(focus)inp.focus();
 }
+
+/* ---------- lista de personas (se actualiza sola) ---------- */
+let lastPeopleFetch=0,peopleBusy=false;
+async function refreshPeople(force){
+  if(!me||peopleBusy||(!force&&Date.now()-lastPeopleFetch<20000))return;
+  peopleBusy=true;
+  try{people=await call("getPeople")||people;lastPeopleFetch=Date.now();
+    const a=document.activeElement;if(a&&a.id&&a.id.startsWith("pick-"))a.dispatchEvent(new Event("input"));}
+  catch(e){}
+  peopleBusy=false;
+}
+setInterval(()=>{if(!document.hidden)refreshPeople(true);},60000);
+window.addEventListener("focus",()=>refreshPeople());
 
 /* ---------- envío ---------- */
 function missingCats(){return CATS.filter(c=>!draft[c.id]);}
