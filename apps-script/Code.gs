@@ -50,7 +50,8 @@ var CATS = [
 var SHEET_VOTES = "Votos";
 var SHEET_PEOPLE = "Personas";
 var SHEET_CONFIG = "Config";
-var VOTE_HEADERS = ["Fecha", "Votante", "CategoriaID", "Categoria", "NominadoCorreo", "NominadoNombre"];
+var VOTE_HEADERS = ["Fecha", "Votante", "CategoriaID", "Categoria", "NominadoCorreo", "NominadoNombre", "Ciudad"];
+var CITIES = ["Medellín", "Bogotá"];
 
 /* ---------------- web app ---------------- */
 
@@ -72,46 +73,30 @@ function getInitialData() {
   ensureSheets_();
   var me = currentEmail_();
   var cfg = readConfig_();
-  var data = {
+  var mine = me ? readMine_(me) : { picks: {}, city: "", sent: false };
+  return {
     me: me,
     isAdmin: isAdmin_(me, cfg),
     status: cfg.estado,
     cats: CATS,
+    cities: CITIES,
     people: readPeople_(),
-    myPicks: me ? readPicks_(me) : {},
+    myPicks: mine.picks,
+    myCity: mine.city,
+    sent: mine.sent,
     results: cfg.estado === "publicada" ? safeJson_(cfg.resultados) : null
   };
-  return data;
 }
 
-function vote(catId, nominee) {
-  var me = requireVoter_();
-  var cat = findCat_(catId);
-  var cfg = readConfig_();
-  if (cfg.estado !== "abierta") throw new Error("La votación está cerrada.");
-  var email = normEmail_(nominee && nominee.email);
-  var name = String((nominee && nominee.name) || "").trim().slice(0, 80);
-  if (!name) throw new Error("Escribe el nombre de tu nominado.");
-  if (email && email === me) throw new Error("No puedes votar por ti mismo.");
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
-    var sh = sheet_(SHEET_VOTES);
-    var row = [new Date(), me, cat.id, cat.n, email, name];
-    var idx = findVoteRow_(sh, me, cat.id);
-    if (idx > 0) sh.getRange(idx, 1, 1, row.length).setValues([row]);
-    else sh.appendRow(row);
-  } finally {
-    lock.releaseLock();
-  }
-  return readPicks_(me);
-}
-
-/** Envía todos los votos de una vez: picks = { catId: {name, email} }. Reemplaza los anteriores. */
-function submitVotes(picks) {
+/**
+ * Envía los votos una sola vez: picks = { catId: {name, email} }, city = "Medellín" | "Bogotá".
+ * Exige las 12 categorías y no permite volver a enviar ni cambiar.
+ */
+function submitVotes(picks, city) {
   var me = requireVoter_();
   if (readConfig_().estado !== "abierta") throw new Error("La votación está cerrada.");
+  city = String(city || "").trim();
+  if (CITIES.indexOf(city) < 0) throw new Error("Elige tu ciudad: Medellín o Bogotá.");
   picks = picks || {};
   var rows = [];
   Object.keys(picks).forEach(function (catId) {
@@ -121,7 +106,7 @@ function submitVotes(picks) {
     var name = String(p.name || "").trim().slice(0, 80);
     if (!name) return;
     if (email && email === me) throw new Error("No puedes votar por ti mismo (" + cat.n + ").");
-    rows.push([new Date(), me, cat.id, cat.n, email, name]);
+    rows.push([new Date(), me, cat.id, cat.n, email, name, city]);
   });
   if (rows.length < CATS.length) {
     throw new Error("Debes elegir un nominado en las " + CATS.length + " categorías antes de enviar. Te faltan " + (CATS.length - rows.length) + ".");
@@ -129,32 +114,13 @@ function submitVotes(picks) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    if (readMine_(me).sent) throw new Error("Ya enviaste tus votos. No se pueden cambiar.");
     var sh = sheet_(SHEET_VOTES);
-    var values = sh.getDataRange().getValues();
-    for (var i = values.length - 1; i >= 1; i--) {
-      if (normEmail_(values[i][1]) === me) sh.deleteRow(i + 1);
-    }
-    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
   } finally {
     lock.releaseLock();
   }
-  return readPicks_(me);
-}
-
-function clearVote(catId) {
-  var me = requireVoter_();
-  findCat_(catId);
-  if (readConfig_().estado !== "abierta") throw new Error("La votación está cerrada.");
-  var lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
-    var sh = sheet_(SHEET_VOTES);
-    var idx = findVoteRow_(sh, me, catId);
-    if (idx > 0) sh.deleteRow(idx);
-  } finally {
-    lock.releaseLock();
-  }
-  return readPicks_(me);
+  return getInitialData();
 }
 
 /* ---------------- organizadores ---------------- */
@@ -162,9 +128,11 @@ function clearVote(catId) {
 function getTally() {
   requireAdmin_();
   var rows = readVotes_();
-  var voters = {};
-  rows.forEach(function (r) { voters[r.voter] = true; });
-  return { tally: tally_(rows), voters: Object.keys(voters).length, status: readConfig_().estado };
+  var out = { status: readConfig_().estado, all: summary_(rows), byCity: {} };
+  CITIES.forEach(function (c) {
+    out.byCity[c] = summary_(rows.filter(function (r) { return r.city === c; }));
+  });
+  return out;
 }
 
 /** status: "abierta" | "cerrada" | "publicada" */
@@ -175,10 +143,14 @@ function setStatus(status) {
   lock.waitLock(20000);
   try {
     if (status === "publicada") {
-      var t = tally_(readVotes_());
+      var rows = readVotes_();
       var results = {};
-      Object.keys(t).forEach(function (cid) {
-        results[cid] = t[cid].slice(0, 3).map(function (x) { return { name: x.name, count: x.count }; });
+      CITIES.forEach(function (c) {
+        var t = tally_(rows.filter(function (r) { return r.city === c; }));
+        results[c] = {};
+        Object.keys(t).forEach(function (cid) {
+          results[c][cid] = t[cid].slice(0, 3).map(function (x) { return { name: x.name, count: x.count }; });
+        });
       });
       writeConfig_("resultados", JSON.stringify(results));
       writeConfig_("publicada_el", new Date());
@@ -192,6 +164,12 @@ function setStatus(status) {
   return getInitialData();
 }
 
+function summary_(rows) {
+  var voters = {};
+  rows.forEach(function (r) { voters[r.voter] = true; });
+  return { tally: tally_(rows), voters: Object.keys(voters).length };
+}
+
 /* ---------------- helpers ---------------- */
 
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
@@ -199,10 +177,13 @@ function sheet_(name) { return ss_().getSheetByName(name); }
 
 function ensureSheets_() {
   var ss = ss_();
-  if (!ss.getSheetByName(SHEET_VOTES)) {
-    var v = ss.insertSheet(SHEET_VOTES);
+  var v = ss.getSheetByName(SHEET_VOTES);
+  if (!v) {
+    v = ss.insertSheet(SHEET_VOTES);
     v.appendRow(VOTE_HEADERS);
     v.setFrozenRows(1);
+  } else if (String(v.getRange(1, 7).getValue()) !== "Ciudad") {
+    v.getRange(1, 7).setValue("Ciudad");
   }
   if (!ss.getSheetByName(SHEET_PEOPLE)) {
     var p = ss.insertSheet(SHEET_PEOPLE);
@@ -274,25 +255,17 @@ function readVotes_() {
   for (var i = 1; i < values.length; i++) {
     var r = values[i];
     if (!r[1] || !r[2]) continue;
-    out.push({ voter: normEmail_(r[1]), cat: String(r[2]), email: normEmail_(r[4]), name: String(r[5] || "").trim() });
+    out.push({ voter: normEmail_(r[1]), cat: String(r[2]), email: normEmail_(r[4]), name: String(r[5] || "").trim(), city: String(r[6] || "").trim() });
   }
   return out;
 }
 
-function readPicks_(me) {
-  var picks = {};
+function readMine_(me) {
+  var picks = {}, city = "", sent = false;
   readVotes_().forEach(function (r) {
-    if (r.voter === me) picks[r.cat] = { email: r.email, name: r.name };
+    if (r.voter === me) { picks[r.cat] = { email: r.email, name: r.name }; city = r.city || city; sent = true; }
   });
-  return picks;
-}
-
-function findVoteRow_(sh, me, catId) {
-  var values = sh.getDataRange().getValues();
-  for (var i = 1; i < values.length; i++) {
-    if (normEmail_(values[i][1]) === me && String(values[i][2]) === catId) return i + 1;
-  }
-  return -1;
+  return { picks: picks, city: city, sent: sent };
 }
 
 function readPeople_() {

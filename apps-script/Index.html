@@ -114,6 +114,22 @@ h1{margin:0;line-height:0}
 .trow .tb b{display:block;height:100%;background:var(--oro)}
 .confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;font-weight:600;padding:12px 14px;border-radius:14px;background:var(--oro-suave);border:2px solid var(--oro)}
 
+/* ---- sede ---- */
+.citybox{margin:20px 0 6px;background:var(--blanco);border:3px solid var(--tinta);border-radius:24px;padding:18px 22px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 24px}
+.citybox.missing{border-color:var(--alerta);box-shadow:0 0 0 4px var(--alerta-suave)}
+.citybox h2{font-family:var(--display);font-weight:900;font-size:22px;margin:0;letter-spacing:.02em}
+.citybox p{margin:2px 0 0;font-size:14px;color:var(--gris);font-weight:500}
+.citybox-txt{min-width:0;flex:1 1 280px}
+.city-opts{display:flex;gap:10px;flex-wrap:wrap}
+.city-opt{font:800 15px var(--body);letter-spacing:.08em;text-transform:uppercase;padding:12px 26px;border-radius:999px;border:2px solid var(--tinta);background:var(--blanco);color:var(--tinta);cursor:pointer;box-shadow:3px 3px 0 var(--tinta)}
+.city-opt[aria-pressed="true"]{background:var(--oro)}
+.city-opt:disabled{cursor:default;box-shadow:none;opacity:.55}
+.city-opt[aria-pressed="true"]:disabled{opacity:1}
+.sendbar-btns{display:flex;gap:10px;flex-wrap:wrap}
+.sendbar.confirm-mode{border-top-color:var(--alerta)}
+.sendbar.done-mode{border-top-color:var(--ok)}
+.sendbar.done-mode #sendTitle{color:var(--ok)}
+
 /* ---- barra de envío ---- */
 .sendbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--blanco);border-top:3px solid var(--oro);box-shadow:0 -10px 30px rgba(120,90,40,.15);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .sendbar-in{max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px}
@@ -148,10 +164,10 @@ footer .logos{width:min(360px,80vw);height:auto}
       <div class="eyebrow">Reconocimientos · Los Dioses del Olimpo Smart Fit</div>
       <h1><img class="titulo" src="https://bienestar-smartfit.github.io/smart-elysium-votacion/assets/titulo.png" alt="Smart Elysium" width="1200" height="408"></h1>
       <img class="lema" src="https://bienestar-smartfit.github.io/smart-elysium-votacion/assets/lema.png" alt="Detrás de cada imperio hay mentes brillantes que sostienen las columnas" width="1400" height="140">
-      <p class="lede"><b>¡Dioses del Olimpo, llegó la hora de coronar a las leyendas!</b> Vota por la persona que mejor encarna cada fuerza. Elige un nominado en <b>cada una de las 12 categorías</b> y pulsa <b>Enviar votos</b>; puedes cambiarlos mientras la votación esté abierta. Tu voto solo lo ve el equipo organizador.</p>
+      <p class="lede"><b>¡Dioses del Olimpo, llegó la hora de coronar a las leyendas!</b> Vota por la persona que mejor encarna cada fuerza. Elige tu sede y un nominado en <b>cada una de las 12 categorías</b>, y pulsa <b>Enviar votos</b>. Revisa bien: una vez enviados no se pueden cambiar. Tu voto solo lo ve el equipo organizador.</p>
       <div class="bar">
         <span class="pill open" id="statusPill"><i></i><span id="statusText">Cargando…</span></span>
-        <span class="progress"><span class="meter"><b id="meterFill"></b></span><span id="progressText">0 de 12 categorías enviadas</span></span>
+        <span class="progress"><span class="meter"><b id="meterFill"></b></span><span id="progressText">0 de 12 categorías elegidas</span></span>
         <span class="progress" id="meLine"></span>
       </div>
     </div>
@@ -159,6 +175,11 @@ footer .logos{width:min(360px,80vw);height:auto}
   </header>
 
   <div class="notice" id="notice" hidden></div>
+
+  <section class="citybox" id="cityBox" hidden>
+    <div class="citybox-txt"><h2 id="cityTitle">¿En qué sede celebras?</h2><p id="citySub">Elige tu ciudad.</p></div>
+    <div class="city-opts" id="cityOpts" role="group" aria-label="Sede"></div>
+  </section>
 
   <div class="filters" id="filters" role="group" aria-label="Filtrar por fuerza"></div>
   <main class="grid" id="grid"></main>
@@ -168,6 +189,7 @@ footer .logos{width:min(360px,80vw);height:auto}
       <h3>Panel del organizador</h3>
       <span class="stat"><b id="ballotCount">0</b>personas han votado</span>
     </div>
+    <div class="row" id="adminCities" role="group" aria-label="Sede del conteo"></div>
     <div class="row" id="adminActions"></div>
     <div id="confirmBox" hidden></div>
     <div class="tally" id="tally"></div>
@@ -182,7 +204,7 @@ footer .logos{width:min(360px,80vw);height:auto}
 <div class="sendbar" id="sendbar" hidden>
   <div class="sendbar-in">
     <div class="sendbar-info"><b id="sendTitle">Elige a tus nominados</b><span id="sendSub">Tus votos se guardan cuando pulses Enviar votos.</span></div>
-    <button type="button" class="btn primary" id="sendBtn" disabled>Enviar votos</button>
+    <div class="sendbar-btns"><button type="button" class="btn" id="backBtn" hidden>Revisar</button><button type="button" class="btn primary" id="sendBtn">Enviar votos</button></div>
   </div>
 </div>
 
@@ -201,9 +223,10 @@ function call(fn,...args){
 }
 const errMsg=e=>(e&&e.message?e.message:String(e||"Error")).replace(/^Exception:\s*/,"");
 
-let CATS=[],people=[],me="",isAdmin=false,status="abierta",picks={},draft={},sending=false,results=null,tallyData=null,filter="all",busy={};
+let CATS=[],CITIES=[],people=[],me="",isAdmin=false,status="abierta",draft={},city="",myCity="",sent=false,sending=false,confirming=false,results=null,tallyData=null,filter="all",adminCity="";
 
 function notice(msg,ok){const n=$("#notice");n.textContent=msg||"";n.hidden=!msg;n.classList.toggle("ok",!!ok);}
+const clone=o=>JSON.parse(JSON.stringify(o||{}));
 
 /* ---------- estructura ---------- */
 function buildFilters(){
@@ -228,44 +251,56 @@ function buildCards(){
   });
 }
 
+/* ---------- ciudad ---------- */
+function renderCity(){
+  const box=$("#cityBox");box.hidden=!me&&status!=="publicada";
+  const opts=$("#cityOpts");opts.replaceChildren();
+  const pub=status==="publicada";
+  $("#cityTitle").textContent=pub?"Resultados de":(sent?"Tu sede":"¿En qué sede celebras?");
+  $("#citySub").textContent=pub?"Elige la sede para ver sus ganadores.":(sent?"Tu sede quedó registrada con tus votos.":"Elige tu ciudad. Tus votos cuentan para los reconocimientos de esa sede.");
+  CITIES.forEach(c=>{
+    const b=el("button","city-opt",c);b.type="button";b.setAttribute("aria-pressed",String(city===c));
+    b.disabled=!pub&&(sent||sending||status!=="abierta");
+    b.onclick=()=>{city=c;confirming=false;$("#cityBox").classList.remove("missing");if(!pub&&!document.querySelector(".card.missing"))notice("");renderAll();};
+    opts.append(b);
+  });
+}
+
 /* ---------- votos ---------- */
 function renderVote(c){
   const v=document.getElementById("vote-"+c.id);
   const card=document.getElementById("card-"+c.id);
-  const p=draft[c.id],saved=picks[c.id];
-  const sent=!!p&&same(p,saved);
-  card.classList.toggle("done",sent);
+  const p=draft[c.id];
+  card.classList.toggle("done",sent&&!!p);
   if(v.dataset.mode==="search"&&v.contains(document.activeElement))return;
   v.replaceChildren();v.dataset.mode="";
   if(status==="publicada"){
-    v.append(el("label",null,"Ganadores"));
-    const res=(results||{})[c.id]||[];
+    v.append(el("label",null,"Ganadores · "+(city||"")));
+    const res=((results||{})[city]||{})[c.id]||[];
     if(!res.length)v.append(el("div","empty","Sin votos en esta categoría."));
     else{const w=el("div","winners");res.forEach((r,i)=>{const row=el("div","win");row.append(el("span","medal",String(i+1)),el("span",null,r.name),el("em",null,r.count+(r.count===1?" voto":" votos")));w.append(row);});v.append(w);}
-    if(p)v.append(el("div","empty","Tu voto: "+p.name));
+    if(p&&city===myCity)v.append(el("div","empty","Tu voto: "+p.name));
     return;
   }
-  const open=status==="abierta"&&!!me&&!sending;
   const lab=el("label",null,p?"Tu voto ":"Tu nominado ");
   if(p)lab.append(el("span",sent?"tag-ok":"tag-pend",sent?"· enviado":"· sin enviar"));
-  else if(saved)lab.append(el("span","tag-pend","· se quitará al enviar"));
   v.append(lab);
+  const open=status==="abierta"&&!!me&&!sending&&!sent;
   if(p){
     const who=el("div","who"+(sent?"":" pending"));who.append(el("span",null,p.name));
     if(open){
       const ch=el("button","link","Cambiar");ch.type="button";ch.onclick=()=>openPicker(c,v);
-      const rm=el("button","link","Quitar");rm.type="button";rm.onclick=()=>{delete draft[c.id];renderAll();};
+      const rm=el("button","link","Quitar");rm.type="button";rm.onclick=()=>{delete draft[c.id];confirming=false;renderAll();};
       who.append(ch,rm);
     }
     v.append(who);
   }else if(open)openPicker(c,v,false);
-  else v.append(el("div","empty",status==="cerrada"?"La votación está cerrada.":"No disponible."));
+  else v.append(el("div","empty",status==="cerrada"?"La votación está cerrada.":(sent?"Sin voto en esta categoría.":"No disponible.")));
 }
 
 function openPicker(c,v,focus=true){
   v.replaceChildren();v.dataset.mode="search";
   const lab=el("label",null,people.length?"Busca a tu nominado ":"Escribe el nombre de tu nominado ");
-  if(picks[c.id]&&!draft[c.id])lab.append(el("span","tag-pend","· se quitará al enviar"));
   v.append(lab);
   const wrap=el("div","picker");
   const inp=document.createElement("input");inp.id="pick-"+c.id;inp.type="text";inp.autocomplete="off";
@@ -274,7 +309,7 @@ function openPicker(c,v,focus=true){
   wrap.append(inp,list);v.append(wrap);
   if(draft[c.id]){const cancel=el("button","link","Cancelar");cancel.type="button";cancel.onclick=()=>{v.dataset.mode="";renderVote(c);};v.append(cancel);}
   let active=-1,opts=[];
-  const choose=pick=>{v.dataset.mode="";inp.blur();draft[c.id]=pick;document.getElementById("card-"+c.id).classList.remove("missing");if(!document.querySelector(".card.missing"))notice("");renderAll();};
+  const choose=pick=>{v.dataset.mode="";inp.blur();draft[c.id]=pick;confirming=false;document.getElementById("card-"+c.id).classList.remove("missing");if(!document.querySelector(".card.missing"))notice("");renderAll();};
   const draw=()=>{
     const q=inp.value,nq=norm(q);list.replaceChildren();opts=[];active=-1;
     const hits=nq?people.filter(p=>norm(p.name).includes(nq)||norm(p.area).includes(nq)).slice(0,8):(people.length<=8?people:[]);
@@ -309,55 +344,62 @@ function openPicker(c,v,focus=true){
   if(focus)inp.focus();
 }
 
-const same=(a,b)=>!!a&&!!b&&a.name===b.name&&(a.email||"")===(b.email||"");
-const clone=o=>JSON.parse(JSON.stringify(o||{}));
-function pendingCount(){
-  let n=0;CATS.forEach(c=>{const a=draft[c.id],b=picks[c.id];if(a||b){if(!(a&&b&&same(a,b)))n++;}});return n;
-}
+/* ---------- envío ---------- */
+function missingCats(){return CATS.filter(c=>!draft[c.id]);}
 function renderSendBar(){
   const bar=$("#sendbar"),show=status==="abierta"&&!!me&&CATS.length>0;
   bar.hidden=!show;document.body.classList.toggle("has-sendbar",show);if(!show)return;
-  const pend=pendingCount(),sel=CATS.filter(c=>draft[c.id]).length,btn=$("#sendBtn");
-  const falta=CATS.length-sel;
-  if(sending){$("#sendTitle").textContent="Enviando tus votos…";$("#sendSub").textContent="No cierres la página.";}
-  else if(falta>0&&(pend||sel)){$("#sendTitle").textContent="Te "+(falta===1?"falta 1 categoría":"faltan "+falta+" categorías");$("#sendSub").textContent=sel+" de "+CATS.length+" elegidas. Debes elegir un nominado en todas para poder enviar.";}
-  else if(pend){$("#sendTitle").textContent="¡Listo para enviar!";$("#sendSub").textContent="Elegiste las "+CATS.length+" categorías. Revisa y pulsa Enviar votos.";}
-  else if(sel){$("#sendTitle").textContent="Tus votos están enviados";$("#sendSub").textContent="Puedes cambiarlos y volver a enviar mientras la votación esté abierta.";}
-  else{$("#sendTitle").textContent="Elige a tus nominados";$("#sendSub").textContent="Elige uno en cada una de las "+CATS.length+" categorías y pulsa Enviar votos.";}
-  btn.disabled=sending||!pend;btn.textContent=sending?"Enviando…":"Enviar votos";
+  const sel=CATS.length-missingCats().length,falta=CATS.length-sel,btn=$("#sendBtn"),back=$("#backBtn");
+  bar.classList.toggle("confirm-mode",confirming);bar.classList.toggle("done-mode",sent);
+  back.hidden=!confirming;btn.hidden=sent;
+  if(sent){$("#sendTitle").textContent="¡Gracias! Tus votos fueron enviados";$("#sendSub").textContent="Sede "+city+" · 12 de 12 categorías. Los votos enviados no se pueden cambiar.";return;}
+  if(sending){$("#sendTitle").textContent="Enviando tus votos…";$("#sendSub").textContent="No cierres la página.";btn.disabled=true;btn.textContent="Enviando…";return;}
+  btn.disabled=false;
+  if(confirming){$("#sendTitle").textContent="¿Enviar tus votos?";$("#sendSub").textContent="Sede "+city+" · 12 de 12 categorías. Después de enviarlos no podrás cambiarlos.";btn.textContent="Sí, enviar";return;}
+  btn.textContent="Enviar votos";
+  if(!sel&&!city){$("#sendTitle").textContent="Elige tu sede y tus nominados";$("#sendSub").textContent="Debes elegir uno en cada una de las "+CATS.length+" categorías para poder enviar.";}
+  else if(falta>0||!city){
+    const partes=[];if(!city)partes.push("tu sede");if(falta>0)partes.push(falta===1?"1 categoría":falta+" categorías");
+    $("#sendTitle").textContent="Te falta elegir "+partes.join(" y ");
+    $("#sendSub").textContent=sel+" de "+CATS.length+" categorías elegidas"+(city?" · Sede "+city:"")+". Revisa bien: después de enviar no podrás cambiar tus votos.";
+  }else{$("#sendTitle").textContent="¡Listo para enviar!";$("#sendSub").textContent="Sede "+city+" · 12 de 12 categorías. Revisa bien: después de enviar no podrás cambiarlos.";}
 }
-async function sendVotes(){
-  if(sending||!pendingCount())return;
-  const missing=CATS.filter(c=>!draft[c.id]);
+async function onSend(){
+  if(sending||sent)return;
+  const missing=missingCats();
   CATS.forEach(c=>document.getElementById("card-"+c.id).classList.toggle("missing",!draft[c.id]));
-  if(missing.length){
+  $("#cityBox").classList.toggle("missing",!city);
+  if(missing.length||!city){
+    const partes=[];if(!city)partes.push("tu sede (Medellín o Bogotá)");
+    if(missing.length)partes.push((missing.length===1?"1 categoría: ":missing.length+" categorías: ")+missing.map(c=>c.n).join(", "));
     filter="all";document.querySelectorAll("#filters .chip").forEach((b,i)=>b.setAttribute("aria-pressed",String(i===0)));CATS.forEach(c=>{document.getElementById("card-"+c.id).hidden=false;});
-    notice("Te "+(missing.length===1?"falta elegir 1 categoría":"faltan "+missing.length+" categorías")+": "+missing.map(c=>c.n).join(", ")+". Están marcadas en naranja.");
-    document.getElementById("card-"+missing[0].id).scrollIntoView({behavior:"smooth",block:"center"});
+    notice("Te falta elegir "+partes.join(" y ")+". Está marcado en naranja.");
+    (city?document.getElementById("card-"+missing[0].id):$("#cityBox")).scrollIntoView({behavior:"smooth",block:"center"});
     return;
   }
-  sending=true;renderAll();
+  if(!confirming){confirming=true;renderSendBar();return;}
+  sending=true;confirming=false;renderAll();
   try{
-    picks=await call("submitVotes",clone(draft));draft=clone(picks);
-    const n=Object.keys(picks).length;
-    notice("¡Listo! Tus votos fueron enviados ("+n+" de "+CATS.length+" categorías).",true);
+    applyData(await call("submitVotes",clone(draft),city));
+    notice("¡Listo! Tus votos fueron enviados. Gracias por participar en Smart Elysium.",true);
     window.scrollTo({top:0,behavior:"smooth"});
   }catch(e){notice("No se enviaron tus votos: "+errMsg(e));}
   sending=false;renderAll();if(isAdmin)loadTally();
 }
-$("#sendBtn").addEventListener("click",sendVotes);
-window.addEventListener("beforeunload",e=>{if(status==="abierta"&&pendingCount()){e.preventDefault();e.returnValue="";}});
+$("#sendBtn").addEventListener("click",onSend);
+$("#backBtn").addEventListener("click",()=>{confirming=false;renderSendBar();});
+window.addEventListener("beforeunload",e=>{if(status==="abierta"&&!sent&&(Object.keys(draft).length||city)){e.preventDefault();e.returnValue="";}});
 
 /* ---------- encabezado ---------- */
 function renderHeader(){
   $("#statusPill").className="pill "+({abierta:"open",cerrada:"closed",publicada:"revealed"}[status]||"open");
   $("#statusText").textContent={abierta:"Votación abierta",cerrada:"Votación cerrada",publicada:"Resultados publicados"}[status]||status;
-  const n=CATS.filter(c=>picks[c.id]).length;
+  const n=CATS.filter(c=>draft[c.id]).length;
   $("#meterFill").style.width=(CATS.length?n/CATS.length*100:0)+"%";
-  $("#progressText").textContent=n+" de "+CATS.length+" categorías enviadas";
+  $("#progressText").textContent=sent?"Votos enviados":n+" de "+CATS.length+" categorías elegidas";
   $("#meLine").textContent=me?"Votando como "+me:"";
 }
-function renderAll(){renderHeader();CATS.forEach(renderVote);renderSendBar();renderAdmin();}
+function renderAll(){renderHeader();renderCity();CATS.forEach(renderVote);renderSendBar();renderAdmin();}
 
 /* ---------- organizadores ---------- */
 let pendingAction=null;
@@ -368,7 +410,13 @@ async function loadTally(){
 }
 function renderAdmin(){
   const box=$("#admin");if(!isAdmin){box.hidden=true;return;}box.hidden=false;
-  $("#ballotCount").textContent=tallyData?tallyData.voters:"…";
+  const view=tallyData?(adminCity?tallyData.byCity[adminCity]:tallyData.all):null;
+  $("#ballotCount").textContent=view?view.voters:"…";
+  const tabs=$("#adminCities");tabs.replaceChildren();
+  [["","Todas"],...CITIES.map(c=>[c,c])].forEach(([v,l])=>{
+    const b=el("button","chip",l+(tallyData?" ("+(v?tallyData.byCity[v].voters:tallyData.all.voters)+")":""));b.type="button";b.setAttribute("aria-pressed",String(adminCity===v));
+    b.onclick=()=>{adminCity=v;renderAdmin();};tabs.append(b);
+  });
   const acts=$("#adminActions");acts.replaceChildren();
   const mk=(txt,act,primary)=>{const b=el("button","btn"+(primary?" primary":""),txt);b.type="button";b.onclick=()=>{pendingAction=act;renderConfirm();};acts.append(b);};
   if(status==="abierta")mk("Cerrar votación","cerrada");
@@ -378,7 +426,7 @@ function renderAdmin(){
   const rf=el("button","btn","Actualizar conteo");rf.type="button";rf.onclick=loadTally;acts.append(rf);
   acts.append(el("span","stat","Solo los organizadores ven este conteo."));
   const tl=$("#tally");tl.replaceChildren();
-  const t=(tallyData&&tallyData.tally)||{};
+  const t=(view&&view.tally)||{};
   CATS.forEach(c=>{
     const card=el("div","tcard");card.append(el("h4",null,c.n));
     const rows=t[c.id]||[];
@@ -392,9 +440,9 @@ function renderAdmin(){
 }
 function renderConfirm(){
   const cb=$("#confirmBox");cb.replaceChildren();if(!pendingAction){cb.hidden=true;return;}cb.hidden=false;
-  const msg={cerrada:status==="publicada"?"¿Ocultar los resultados? La votación quedará cerrada.":"¿Cerrar la votación? Nadie podrá votar ni cambiar su voto.",
+  const msg={cerrada:status==="publicada"?"¿Ocultar los resultados? La votación quedará cerrada.":"¿Cerrar la votación? Nadie más podrá enviar votos.",
     abierta:"¿Reabrir la votación? Se ocultarán los resultados publicados.",
-    publicada:"¿Publicar resultados? Todos verán el top 3 de cada categoría con su número de votos."}[pendingAction];
+    publicada:"¿Publicar resultados? Cada persona verá el top 3 de cada categoría de su sede (Medellín o Bogotá)."}[pendingAction];
   const box=el("div","confirm");box.append(el("span",null,msg));
   const yes=el("button","btn primary","Confirmar");yes.type="button";
   yes.onclick=async()=>{const a=pendingAction;pendingAction=null;yes.disabled=true;
@@ -405,14 +453,19 @@ function renderConfirm(){
 
 /* ---------- arranque ---------- */
 function applyData(d){
-  me=d.me||"";isAdmin=!!d.isAdmin;status=d.status||"abierta";
-  people=d.people||[];picks=d.myPicks||{};draft=clone(picks);results=d.results||null;
+  const wasSent=sent;
+  me=d.me||"";isAdmin=!!d.isAdmin;status=d.status||"abierta";CITIES=d.cities||["Medellín","Bogotá"];
+  people=d.people||[];results=d.results||null;sent=!!d.sent;
+  if(sent||!wasSent&&!Object.keys(draft).length)draft=clone(d.myPicks);
+  myCity=d.myCity||"";if(d.myCity)city=d.myCity;
+  if(status==="publicada"&&!city)city=CITIES[0];
   if(!CATS.length){CATS=d.cats;buildFilters();buildCards();}
 }
 (async()=>{
   try{
     applyData(await call("getInitialData"));
     if(!me)notice("No pudimos identificar tu cuenta. Entra con tu correo corporativo de Google para votar.");
+    else if(sent&&status==="abierta")notice("Ya enviaste tus votos (sede "+city+"). Gracias por participar.",true);
     renderAll();
     if(isAdmin){loadTally();setInterval(()=>{if(!document.hidden)loadTally();},30000);}
   }catch(e){notice("No se pudo cargar la votación: "+errMsg(e));$("#statusText").textContent="Sin conexión";}
