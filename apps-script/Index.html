@@ -125,6 +125,7 @@ body.has-sendbar{padding-bottom:110px}
 .who.pending{background:var(--oro-suave);border:2px dashed var(--oro-osc)}
 .tag-pend{font:800 10px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--alerta)}
 .tag-ok{font:800 10px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--ok)}
+.card.missing{border-color:var(--alerta);box-shadow:0 0 0 4px var(--alerta-suave)}
 .notice.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-suave)}
 
 /* ---- pie ---- */
@@ -147,7 +148,7 @@ footer .logos{width:min(360px,80vw);height:auto}
       <div class="eyebrow">Reconocimientos · Los Dioses del Olimpo Smart Fit</div>
       <h1><img class="titulo" src="https://bienestar-smartfit.github.io/smart-elysium-votacion/assets/titulo.png" alt="Smart Elysium" width="1200" height="408"></h1>
       <img class="lema" src="https://bienestar-smartfit.github.io/smart-elysium-votacion/assets/lema.png" alt="Detrás de cada imperio hay mentes brillantes que sostienen las columnas" width="1400" height="140">
-      <p class="lede"><b>¡Dioses del Olimpo, llegó la hora de coronar a las leyendas!</b> Vota por la persona que mejor encarna cada fuerza. Elige un nominado por categoría y pulsa <b>Enviar votos</b>; puedes cambiarlos mientras la votación esté abierta. Tu voto solo lo ve el equipo organizador.</p>
+      <p class="lede"><b>¡Dioses del Olimpo, llegó la hora de coronar a las leyendas!</b> Vota por la persona que mejor encarna cada fuerza. Elige un nominado en <b>cada una de las 12 categorías</b> y pulsa <b>Enviar votos</b>; puedes cambiarlos mientras la votación esté abierta. Tu voto solo lo ve el equipo organizador.</p>
       <div class="bar">
         <span class="pill open" id="statusPill"><i></i><span id="statusText">Cargando…</span></span>
         <span class="progress"><span class="meter"><b id="meterFill"></b></span><span id="progressText">0 de 12 categorías enviadas</span></span>
@@ -273,7 +274,7 @@ function openPicker(c,v,focus=true){
   wrap.append(inp,list);v.append(wrap);
   if(draft[c.id]){const cancel=el("button","link","Cancelar");cancel.type="button";cancel.onclick=()=>{v.dataset.mode="";renderVote(c);};v.append(cancel);}
   let active=-1,opts=[];
-  const choose=pick=>{v.dataset.mode="";inp.blur();draft[c.id]=pick;notice("");renderAll();};
+  const choose=pick=>{v.dataset.mode="";inp.blur();draft[c.id]=pick;document.getElementById("card-"+c.id).classList.remove("missing");if(!document.querySelector(".card.missing"))notice("");renderAll();};
   const draw=()=>{
     const q=inp.value,nq=norm(q);list.replaceChildren();opts=[];active=-1;
     const hits=nq?people.filter(p=>norm(p.name).includes(nq)||norm(p.area).includes(nq)).slice(0,8):(people.length<=8?people:[]);
@@ -317,14 +318,24 @@ function renderSendBar(){
   const bar=$("#sendbar"),show=status==="abierta"&&!!me&&CATS.length>0;
   bar.hidden=!show;document.body.classList.toggle("has-sendbar",show);if(!show)return;
   const pend=pendingCount(),sel=CATS.filter(c=>draft[c.id]).length,btn=$("#sendBtn");
+  const falta=CATS.length-sel;
   if(sending){$("#sendTitle").textContent="Enviando tus votos…";$("#sendSub").textContent="No cierres la página.";}
-  else if(pend){$("#sendTitle").textContent=pend+(pend===1?" cambio sin enviar":" cambios sin enviar");$("#sendSub").textContent=sel+" de "+CATS.length+" categorías con nominado. Puedes enviar ahora y completar el resto después.";}
-  else if(sel){$("#sendTitle").textContent="Tus votos están enviados";$("#sendSub").textContent=sel+" de "+CATS.length+" categorías. Puedes cambiarlos y volver a enviar mientras la votación esté abierta.";}
-  else{$("#sendTitle").textContent="Elige a tus nominados";$("#sendSub").textContent="Tus votos se guardan cuando pulses Enviar votos.";}
+  else if(falta>0&&(pend||sel)){$("#sendTitle").textContent="Te "+(falta===1?"falta 1 categoría":"faltan "+falta+" categorías");$("#sendSub").textContent=sel+" de "+CATS.length+" elegidas. Debes elegir un nominado en todas para poder enviar.";}
+  else if(pend){$("#sendTitle").textContent="¡Listo para enviar!";$("#sendSub").textContent="Elegiste las "+CATS.length+" categorías. Revisa y pulsa Enviar votos.";}
+  else if(sel){$("#sendTitle").textContent="Tus votos están enviados";$("#sendSub").textContent="Puedes cambiarlos y volver a enviar mientras la votación esté abierta.";}
+  else{$("#sendTitle").textContent="Elige a tus nominados";$("#sendSub").textContent="Elige uno en cada una de las "+CATS.length+" categorías y pulsa Enviar votos.";}
   btn.disabled=sending||!pend;btn.textContent=sending?"Enviando…":"Enviar votos";
 }
 async function sendVotes(){
   if(sending||!pendingCount())return;
+  const missing=CATS.filter(c=>!draft[c.id]);
+  CATS.forEach(c=>document.getElementById("card-"+c.id).classList.toggle("missing",!draft[c.id]));
+  if(missing.length){
+    filter="all";document.querySelectorAll("#filters .chip").forEach((b,i)=>b.setAttribute("aria-pressed",String(i===0)));CATS.forEach(c=>{document.getElementById("card-"+c.id).hidden=false;});
+    notice("Te "+(missing.length===1?"falta elegir 1 categoría":"faltan "+missing.length+" categorías")+": "+missing.map(c=>c.n).join(", ")+". Están marcadas en naranja.");
+    document.getElementById("card-"+missing[0].id).scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
   sending=true;renderAll();
   try{
     picks=await call("submitVotes",clone(draft));draft=clone(picks);

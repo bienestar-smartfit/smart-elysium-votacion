@@ -123,6 +123,9 @@ function submitVotes(picks) {
     if (email && email === me) throw new Error("No puedes votar por ti mismo (" + cat.n + ").");
     rows.push([new Date(), me, cat.id, cat.n, email, name]);
   });
+  if (rows.length < CATS.length) {
+    throw new Error("Debes elegir un nominado en las " + CATS.length + " categorías antes de enviar. Te faltan " + (CATS.length - rows.length) + ".");
+  }
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
