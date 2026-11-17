@@ -11,7 +11,7 @@ Votación de los 12 reconocimientos **Los Dioses del Olimpo Smart Fit**. Cada pe
 |---|---|
 | Quién vota | Cualquier persona con cuenta del dominio corporativo |
 | Sede | Cada persona elige Medellín o Bogotá; el conteo y los resultados van por sede |
-| Votos | Hay que elegir nominado en las 12 categorías y pulsar **Enviar votos**. Se envían una sola vez y no se pueden cambiar. Nadie puede votar por sí mismo |
+| Votos | Cada persona vota en las categorías que quiera (una, varias o las 12) y pulsa **Enviar votos**. Se envían una sola vez y no se pueden cambiar. Nadie puede votar por sí mismo |
 | Dónde quedan | Hoja **Votos** de la hoja de cálculo |
 | Quién ve el conteo | El dueño del script y los correos en **Config › organizadores** |
 | Resultados | El organizador los publica: cada sede ve su top 3 por categoría |
