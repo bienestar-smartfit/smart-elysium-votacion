@@ -90,7 +90,7 @@ function getInitialData() {
 
 /**
  * Envía los votos una sola vez: picks = { catId: {name, email} }, city = "Medellín" | "Bogotá".
- * Exige las 12 categorías y no permite volver a enviar ni cambiar.
+ * Exige sede y al menos una categoría; no permite volver a enviar ni cambiar.
  */
 function submitVotes(picks, city) {
   var me = requireVoter_();
@@ -108,9 +108,7 @@ function submitVotes(picks, city) {
     if (email && email === me) throw new Error("No puedes votar por ti mismo (" + cat.n + ").");
     rows.push([new Date(), me, cat.id, cat.n, email, name, city]);
   });
-  if (rows.length < CATS.length) {
-    throw new Error("Debes elegir un nominado en las " + CATS.length + " categorías antes de enviar. Te faltan " + (CATS.length - rows.length) + ".");
-  }
+  if (!rows.length) throw new Error("Elige al menos un nominado antes de enviar.");
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
