@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Elysium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: marble column of laurel-numbered award cards; organizer tally drawer below. */
+:root{
+  --bg:#f7f7f4; --surface:#ffffff; --marble:#eceae4; --ink:#1d1f24; --muted:#62656d;
+  --line:#dcd9d0; --gold:#a67c1d; --gold-soft:#f3e9cf; --gold-ink:#7a5a10;
+  --ok:#2f7a4b; --ok-soft:#e2f1e7; --warn:#9a5b00; --warn-soft:#fbecd4;
+  --display:"Cinzel","Trajan Pro",Georgia,serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13151b; --surface:#1b1e26; --marble:#232733; --ink:#ecebe6; --muted:#a3a6ae;
+  --line:#2f3340; --gold:#d8ad4a; --gold-soft:#2e2715; --gold-ink:#e9c76f;
+  --ok:#6fcf93; --ok-soft:#173022; --warn:#f0b35a; --warn-soft:#33260f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13151b; --surface:#1b1e26; --marble:#232733; --ink:#ecebe6; --muted:#a3a6ae;
+  --line:#2f3340; --gold:#d8ad4a; --gold-soft:#2e2715; --gold-ink:#e9c76f;
+  --ok:#6fcf93; --ok-soft:#173022; --warn:#f0b35a; --warn-soft:#33260f; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:1080px;margin:0 auto}
+header.hero{padding-block:40px 28px;border-bottom:1px solid var(--line);display:grid;gap:14px}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-ink);font-weight:600}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,5vw,52px);line-height:1.05;margin:0;letter-spacing:.04em;text-wrap:balance}
+h1 span{color:var(--gold)}
+.lede{color:var(--muted);max-width:62ch;margin:0}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:6px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface)}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.open{color:var(--ok);background:var(--ok-soft);border-color:transparent}
+.pill.closed{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.pill.revealed{color:var(--gold-ink);background:var(--gold-soft);border-color:transparent}
+.progress{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.meter{width:140px;height:6px;border-radius:3px;background:var(--marble);overflow:hidden}
+.meter b{display:block;height:100%;background:var(--gold);width:0;transition:width .3s}
+.notice{margin-top:20px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 16px}
+.chip{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0;position:relative}
+.card.done{border-color:var(--gold)}
+.num{font-family:var(--display);font-size:13px;color:var(--gold-ink);letter-spacing:.12em}
+.card h2{font-family:var(--display);font-size:21px;font-weight:600;margin:0;line-height:1.2;letter-spacing:.02em}
+.force{align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-ink);background:var(--gold-soft);padding:3px 9px;border-radius:4px}
+.myth{font-size:13px;color:var(--muted);font-style:italic;margin:0}
+.desc{margin:0;font-size:14px}
+.vote{margin-top:auto;padding-top:12px;border-top:1px dashed var(--line);display:grid;gap:8px}
+.vote label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.picker{position:relative}
+.picker input{width:100%;font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.14);max-height:260px;overflow:auto;padding:4px}
+.opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer}
+.opt:hover,.opt.active{background:var(--marble)}
+.opt img,.who img{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;background:var(--marble)}
+.opt small{color:var(--muted);margin-left:auto}
+.who{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--gold-soft);min-width:0}
+.who span{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.link{font:inherit;font-size:13px;border:0;background:none;color:var(--gold-ink);cursor:pointer;text-decoration:underline;padding:0}
+.saved{font-size:12px;color:var(--ok)}
+.winners{display:grid;gap:6px}
+.win{display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.medal{font-family:var(--display);font-weight:700;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:1.5px solid var(--gold);color:var(--gold-ink)}
+.win:first-child .medal{background:var(--gold);color:var(--surface)}
+.win span{flex:1;min-width:0;overflow-wrap:anywhere}
+.win em{font-style:normal;color:var(--muted);font-size:13px}
+/* organizer */
+.admin{margin-top:40px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:20px;display:grid;gap:18px}
+.admin h3{font-family:var(--display);margin:0;font-size:22px}
+.admin .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{font:inherit;font-weight:600;font-size:14px;padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn[disabled]{opacity:.5;cursor:default}
+.stat{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px}
+.stat b{color:var(--ink);font-size:20px;margin-right:4px}
+.tally{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.tcard{border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;min-width:0}
+.tcard h4{margin:0;font-family:var(--display);font-size:15px}
+.trow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:13px;font-variant-numeric:tabular-nums}
+.trow .tb{grid-column:1/-1;height:5px;border-radius:3px;background:var(--marble);overflow:hidden}
+.trow .tb b{display:block;height:100%;background:var(--gold)}
+.empty{color:var(--muted);font-size:13px}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;padding:10px 12px;border-radius:8px;background:var(--warn-soft)}
+footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style>
+.landing{display:grid;gap:22px;padding-block:24px}
+.cta{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;text-decoration:none;font-weight:600;font-size:16px;padding:13px 22px;border-radius:10px;background:var(--gold);color:#fff}
+.cta:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+ol.cats{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+ol.cats li{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+ol.cats .num{min-width:34px}
+ol.cats strong{font-family:var(--display);font-weight:600;flex:1;min-width:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Reconocimientos · Los Dioses del Olimpo Smart Fit</div>
+    <h1>Smart <span>Elysium</span></h1>
+    <p class="lede">Doce reconocimientos, seis fuerzas. Entra con tu correo corporativo y vota por la persona que mejor encarna cada una. Tienes un voto por categoría y puedes cambiarlo mientras la votación esté abierta.</p>
+  </header>
+  <section class="landing">
+    <a class="cta" id="cta" href="#" hidden>Ir a votar →</a>
+    <div class="notice" id="setup" hidden>La votación todavía no está conectada. Pega la URL de la aplicación web de Apps Script en <code>config.js</code>.</div>
+    <ol class="cats">
+      <li><span class="num">I</span><strong>El Oráculo de Delfos</strong><span class="force">Data Driven</span></li>
+      <li><span class="num">II</span><strong>El Rayo de Zeus</strong><span class="force">Move Fast</span></li>
+      <li><span class="num">III</span><strong>La Fuerza de Hércules</strong><span class="force">Ownership</span></li>
+      <li><span class="num">IV</span><strong>La Falange de Esparta</strong><span class="force">Teamwork</span></li>
+      <li><span class="num">V</span><strong>La Luz de Apolo</strong><span class="force">Customer Centric</span></li>
+      <li><span class="num">VI</span><strong>La Visión de Atenea</strong><span class="force">Leading the Future</span></li>
+      <li><span class="num">VII</span><strong>Las Alas de Hermes</strong><span class="force">Move Fast</span></li>
+      <li><span class="num">VIII</span><strong>La Brújula de Nereo</strong><span class="force">Data Driven</span></li>
+      <li><span class="num">IX</span><strong>El Escudo de Prometeo</strong><span class="force">Ownership</span></li>
+      <li><span class="num">X</span><strong>El Vellocino de Oro</strong><span class="force">Customer Centric</span></li>
+      <li><span class="num">XI</span><strong>La Antorcha de Titán</strong><span class="force">Leading the Future</span></li>
+      <li><span class="num">XII</span><strong>La Armonía de las Musas</strong><span class="force">Teamwork</span></li>
+    </ol>
+  </section>
+  <footer>Smart Elysium · Smart Fit</footer>
+</div>
+<script src="config.js"></script>
+<script>
+  var url=(window.SMART_ELYSIUM_URL||"").trim();
+  if(/^https:\/\/script\.google\.com\//.test(url)){var a=document.getElementById("cta");a.href=url;a.hidden=false;}
+  else document.getElementById("setup").hidden=false;
+</script>
+</body>
+</html>
