@@ -108,6 +108,36 @@ function vote(catId, nominee) {
   return readPicks_(me);
 }
 
+/** Envía todos los votos de una vez: picks = { catId: {name, email} }. Reemplaza los anteriores. */
+function submitVotes(picks) {
+  var me = requireVoter_();
+  if (readConfig_().estado !== "abierta") throw new Error("La votación está cerrada.");
+  picks = picks || {};
+  var rows = [];
+  Object.keys(picks).forEach(function (catId) {
+    var cat = findCat_(catId);
+    var p = picks[catId] || {};
+    var email = normEmail_(p.email);
+    var name = String(p.name || "").trim().slice(0, 80);
+    if (!name) return;
+    if (email && email === me) throw new Error("No puedes votar por ti mismo (" + cat.n + ").");
+    rows.push([new Date(), me, cat.id, cat.n, email, name]);
+  });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = sheet_(SHEET_VOTES);
+    var values = sh.getDataRange().getValues();
+    for (var i = values.length - 1; i >= 1; i--) {
+      if (normEmail_(values[i][1]) === me) sh.deleteRow(i + 1);
+    }
+    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+  } finally {
+    lock.releaseLock();
+  }
+  return readPicks_(me);
+}
+
 function clearVote(catId) {
   var me = requireVoter_();
   findCat_(catId);
