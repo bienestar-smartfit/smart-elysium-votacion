@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Elysium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: marble column of laurel-numbered award cards; organizer tally drawer below. */
+:root{
+  --bg:#f7f7f4; --surface:#ffffff; --marble:#eceae4; --ink:#1d1f24; --muted:#62656d;
+  --line:#dcd9d0; --gold:#a67c1d; --gold-soft:#f3e9cf; --gold-ink:#7a5a10;
+  --ok:#2f7a4b; --ok-soft:#e2f1e7; --warn:#9a5b00; --warn-soft:#fbecd4;
+  --display:"Cinzel","Trajan Pro",Georgia,serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13151b; --surface:#1b1e26; --marble:#232733; --ink:#ecebe6; --muted:#a3a6ae;
+  --line:#2f3340; --gold:#d8ad4a; --gold-soft:#2e2715; --gold-ink:#e9c76f;
+  --ok:#6fcf93; --ok-soft:#173022; --warn:#f0b35a; --warn-soft:#33260f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13151b; --surface:#1b1e26; --marble:#232733; --ink:#ecebe6; --muted:#a3a6ae;
+  --line:#2f3340; --gold:#d8ad4a; --gold-soft:#2e2715; --gold-ink:#e9c76f;
+  --ok:#6fcf93; --ok-soft:#173022; --warn:#f0b35a; --warn-soft:#33260f; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:1080px;margin:0 auto}
+header.hero{padding-block:40px 28px;border-bottom:1px solid var(--line);display:grid;gap:14px}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-ink);font-weight:600}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,5vw,52px);line-height:1.05;margin:0;letter-spacing:.04em;text-wrap:balance}
+h1 span{color:var(--gold)}
+.lede{color:var(--muted);max-width:62ch;margin:0}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:6px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--surface)}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.open{color:var(--ok);background:var(--ok-soft);border-color:transparent}
+.pill.closed{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.pill.revealed{color:var(--gold-ink);background:var(--gold-soft);border-color:transparent}
+.progress{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.meter{width:140px;height:6px;border-radius:3px;background:var(--marble);overflow:hidden}
+.meter b{display:block;height:100%;background:var(--gold);width:0;transition:width .3s}
+.notice{margin-top:20px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 16px}
+.chip{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0;position:relative}
+.card.done{border-color:var(--gold)}
+.num{font-family:var(--display);font-size:13px;color:var(--gold-ink);letter-spacing:.12em}
+.card h2{font-family:var(--display);font-size:21px;font-weight:600;margin:0;line-height:1.2;letter-spacing:.02em}
+.force{align-self:flex-start;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-ink);background:var(--gold-soft);padding:3px 9px;border-radius:4px}
+.myth{font-size:13px;color:var(--muted);font-style:italic;margin:0}
+.desc{margin:0;font-size:14px}
+.vote{margin-top:auto;padding-top:12px;border-top:1px dashed var(--line);display:grid;gap:8px}
+.vote label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.picker{position:relative}
+.picker input{width:100%;font:inherit;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.14);max-height:260px;overflow:auto;padding:4px}
+.opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer}
+.opt:hover,.opt.active{background:var(--marble)}
+.opt img,.who img{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;background:var(--marble)}
+.opt small{color:var(--muted);margin-left:auto}
+.who{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--gold-soft);min-width:0}
+.who span{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.link{font:inherit;font-size:13px;border:0;background:none;color:var(--gold-ink);cursor:pointer;text-decoration:underline;padding:0}
+.saved{font-size:12px;color:var(--ok)}
+.winners{display:grid;gap:6px}
+.win{display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.medal{font-family:var(--display);font-weight:700;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:1.5px solid var(--gold);color:var(--gold-ink)}
+.win:first-child .medal{background:var(--gold);color:var(--surface)}
+.win span{flex:1;min-width:0;overflow-wrap:anywhere}
+.win em{font-style:normal;color:var(--muted);font-size:13px}
+/* organizer */
+.admin{margin-top:40px;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:20px;display:grid;gap:18px}
+.admin h3{font-family:var(--display);margin:0;font-size:22px}
+.admin .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{font:inherit;font-weight:600;font-size:14px;padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn[disabled]{opacity:.5;cursor:default}
+.stat{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px}
+.stat b{color:var(--ink);font-size:20px;margin-right:4px}
+.tally{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.tcard{border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;min-width:0}
+.tcard h4{margin:0;font-family:var(--display);font-size:15px}
+.trow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;font-size:13px;font-variant-numeric:tabular-nums}
+.trow .tb{grid-column:1/-1;height:5px;border-radius:3px;background:var(--marble);overflow:hidden}
+.trow .tb b{display:block;height:100%;background:var(--gold)}
+.empty{color:var(--muted);font-size:13px}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;padding:10px 12px;border-radius:8px;background:var(--warn-soft)}
+footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Reconocimientos · Los Dioses del Olimpo Smart Fit</div>
+    <h1>Smart <span>Elysium</span></h1>
+    <p class="lede">Vota por la persona que mejor encarna cada fuerza. Puedes elegir a una persona por categoría y cambiar tu voto mientras la votación esté abierta. Tu voto solo lo ve el equipo organizador.</p>
+    <div class="bar">
+      <span class="pill open" id="statusPill"><i></i><span id="statusText">Cargando…</span></span>
+      <span class="progress"><span class="meter"><b id="meterFill"></b></span><span id="progressText">0 de 12 categorías votadas</span></span>
+      <span class="progress" id="meLine"></span>
+    </div>
+  </header>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="filters" id="filters" role="group" aria-label="Filtrar por fuerza"></div>
+  <main class="grid" id="grid"></main>
+
+  <section class="admin" id="admin" hidden>
+    <div class="row" style="justify-content:space-between">
+      <h3>Panel del organizador</h3>
+      <span class="stat"><b id="ballotCount">0</b>personas han votado</span>
+    </div>
+    <div class="row" id="adminActions"></div>
+    <div id="confirmBox" hidden></div>
+    <div class="tally" id="tally"></div>
+  </section>
+
+  <footer>Smart Elysium · 12 reconocimientos · 6 fuerzas</footer>
+</div>
+
+<script>
+const ROMAN=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"];
+const $=s=>document.querySelector(s);
+const el=(t,cls,txt)=>{const e=document.createElement(t);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;};
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
+
+/* google.script.run como promesa */
+function call(fn,...args){
+  return new Promise((res,rej)=>{
+    if(!(window.google&&google.script&&google.script.run)){rej(new Error("Abre la votación desde su enlace oficial."));return;}
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args);
+  });
+}
+const errMsg=e=>(e&&e.message?e.message:String(e||"Error")).replace(/^Exception:\s*/,"");
+
+let CATS=[],people=[],me="",isAdmin=false,status="abierta",picks={},results=null,tallyData=null,filter="all",busy={};
+
+function notice(msg){const n=$("#notice");n.textContent=msg||"";n.hidden=!msg;}
+
+/* ---------- estructura ---------- */
+function buildFilters(){
+  const f=$("#filters");f.replaceChildren();
+  const forces=[...new Set(CATS.map(c=>c.f))];
+  [["all","Todas"],...forces.map(x=>[x,x])].forEach(([v,l])=>{
+    const b=el("button","chip",l);b.type="button";b.setAttribute("aria-pressed",String(v===filter));
+    b.onclick=()=>{filter=v;f.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",String(c===b)));
+      CATS.forEach(c=>{document.getElementById("card-"+c.id).hidden=!(filter==="all"||c.f===filter);});};
+    f.append(b);
+  });
+}
+function buildCards(){
+  const g=$("#grid");g.replaceChildren();
+  CATS.forEach((c,i)=>{
+    const card=el("article","card");card.id="card-"+c.id;
+    card.append(el("div","num","Reconocimiento "+ROMAN[i]),el("h2",null,c.n));
+    const fc=el("span","force",c.f);fc.title=c.fe;card.append(fc);
+    card.append(el("p","myth",c.m),el("p","desc",c.d));
+    const v=el("div","vote");v.id="vote-"+c.id;card.append(v);
+    g.append(card);
+  });
+}
+
+/* ---------- votos ---------- */
+function renderVote(c){
+  const v=document.getElementById("vote-"+c.id);
+  const card=document.getElementById("card-"+c.id);
+  const p=picks[c.id];
+  card.classList.toggle("done",!!p);
+  if(v.dataset.mode==="search"&&v.contains(document.activeElement))return;
+  v.replaceChildren();v.dataset.mode="";
+  if(status==="publicada"){
+    v.append(el("label",null,"Ganadores"));
+    const res=(results||{})[c.id]||[];
+    if(!res.length)v.append(el("div","empty","Sin votos en esta categoría."));
+    else{const w=el("div","winners");res.forEach((r,i)=>{const row=el("div","win");row.append(el("span","medal",String(i+1)),el("span",null,r.name),el("em",null,r.count+(r.count===1?" voto":" votos")));w.append(row);});v.append(w);}
+    if(p)v.append(el("div","empty","Tu voto: "+p.name));
+    return;
+  }
+  v.append(el("label",null,p?"Tu voto":"Tu nominado"));
+  const open=status==="abierta"&&!!me;
+  if(busy[c.id]){v.append(el("div","empty","Guardando…"));return;}
+  if(p){
+    const who=el("div","who");who.append(el("span",null,p.name));
+    if(open){
+      const ch=el("button","link","Cambiar");ch.type="button";ch.onclick=()=>openPicker(c,v);
+      const rm=el("button","link","Quitar");rm.type="button";rm.onclick=()=>removeVote(c);
+      who.append(ch,rm);
+    }
+    v.append(who);
+  }else if(open)openPicker(c,v,false);
+  else v.append(el("div","empty",status==="cerrada"?"La votación está cerrada.":"No disponible."));
+}
+
+function openPicker(c,v,focus=true){
+  v.replaceChildren();v.dataset.mode="search";
+  v.append(el("label",null,people.length?"Busca a tu nominado":"Escribe el nombre de tu nominado"));
+  const wrap=el("div","picker");
+  const inp=document.createElement("input");inp.id="pick-"+c.id;inp.type="text";inp.autocomplete="off";
+  inp.placeholder="Escribe un nombre…";inp.setAttribute("aria-label","Nominado para "+c.n);
+  const list=el("div","list");list.hidden=true;list.setAttribute("role","listbox");
+  wrap.append(inp,list);v.append(wrap);
+  if(picks[c.id]){const cancel=el("button","link","Cancelar");cancel.type="button";cancel.onclick=()=>{v.dataset.mode="";renderVote(c);};v.append(cancel);}
+  let active=-1,opts=[];
+  const choose=pick=>{v.dataset.mode="";inp.blur();castVote(c,pick);};
+  const draw=()=>{
+    const q=inp.value,nq=norm(q);list.replaceChildren();opts=[];active=-1;
+    const hits=nq?people.filter(p=>norm(p.name).includes(nq)||norm(p.area).includes(nq)).slice(0,8):(people.length<=8?people:[]);
+    hits.forEach(h=>{
+      const b=el("button","opt");b.type="button";b.setAttribute("role","option");
+      b.append(el("span",null,h.name));if(h.area)b.append(el("small",null,h.area));
+      const self=h.email&&h.email===me;
+      if(self){b.disabled=true;b.append(el("small",null," · eres tú"));}
+      b.onmousedown=e=>e.preventDefault();
+      b.onclick=()=>choose({name:h.name,email:h.email});
+      list.append(b);if(!self)opts.push(b);
+    });
+    const exact=people.some(p=>norm(p.name)===nq);
+    if(q.trim().length>=2&&!exact){
+      const b=el("button","opt");b.type="button";b.setAttribute("role","option");
+      b.append(el("span",null,"Votar por «"+q.trim()+"»"),el("small",null,people.length?"no aparece en la lista":""));
+      b.onmousedown=e=>e.preventDefault();
+      b.onclick=()=>choose({name:q.trim().slice(0,80),email:""});
+      list.append(b);opts.push(b);
+    }
+    list.hidden=!list.children.length;
+  };
+  inp.addEventListener("input",draw);
+  inp.addEventListener("focus",draw);
+  inp.addEventListener("blur",()=>setTimeout(()=>{list.hidden=true;},120));
+  inp.addEventListener("keydown",e=>{
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!opts.length)return;
+      active=(active+(e.key==="ArrowDown"?1:-1)+opts.length)%opts.length;opts.forEach((o,i)=>o.classList.toggle("active",i===active));}
+    else if(e.key==="Enter"){e.preventDefault();if(active>=0)opts[active].click();else if(opts.length===1)opts[0].click();}
+    else if(e.key==="Escape"){list.hidden=true;}
+  });
+  if(focus)inp.focus();
+}
+
+async function castVote(c,pick){
+  const prev=picks[c.id];busy[c.id]=true;picks[c.id]=pick;renderAll();
+  try{picks=await call("vote",c.id,pick);notice("");}
+  catch(e){if(prev)picks[c.id]=prev;else delete picks[c.id];notice(errMsg(e));}
+  busy[c.id]=false;renderAll();if(isAdmin)loadTally();
+}
+async function removeVote(c){
+  const prev=picks[c.id];busy[c.id]=true;renderAll();
+  try{picks=await call("clearVote",c.id);notice("");}
+  catch(e){picks[c.id]=prev;notice(errMsg(e));}
+  busy[c.id]=false;renderAll();if(isAdmin)loadTally();
+}
+
+/* ---------- encabezado ---------- */
+function renderHeader(){
+  $("#statusPill").className="pill "+({abierta:"open",cerrada:"closed",publicada:"revealed"}[status]||"open");
+  $("#statusText").textContent={abierta:"Votación abierta",cerrada:"Votación cerrada",publicada:"Resultados publicados"}[status]||status;
+  const n=CATS.filter(c=>picks[c.id]).length;
+  $("#meterFill").style.width=(CATS.length?n/CATS.length*100:0)+"%";
+  $("#progressText").textContent=n+" de "+CATS.length+" categorías votadas";
+  $("#meLine").textContent=me?"Votando como "+me:"";
+}
+function renderAll(){renderHeader();CATS.forEach(renderVote);renderAdmin();}
+
+/* ---------- organizadores ---------- */
+let pendingAction=null;
+async function loadTally(){
+  if(!isAdmin)return;
+  try{tallyData=await call("getTally");status=tallyData.status;}catch(e){notice(errMsg(e));}
+  renderHeader();renderAdmin();
+}
+function renderAdmin(){
+  const box=$("#admin");if(!isAdmin){box.hidden=true;return;}box.hidden=false;
+  $("#ballotCount").textContent=tallyData?tallyData.voters:"…";
+  const acts=$("#adminActions");acts.replaceChildren();
+  const mk=(txt,act,primary)=>{const b=el("button","btn"+(primary?" primary":""),txt);b.type="button";b.onclick=()=>{pendingAction=act;renderConfirm();};acts.append(b);};
+  if(status==="abierta")mk("Cerrar votación","cerrada");
+  if(status!=="abierta")mk("Reabrir votación","abierta");
+  if(status!=="publicada")mk("Publicar resultados","publicada",true);
+  if(status==="publicada")mk("Ocultar resultados","cerrada");
+  const rf=el("button","btn","Actualizar conteo");rf.type="button";rf.onclick=loadTally;acts.append(rf);
+  acts.append(el("span","stat","Solo los organizadores ven este conteo."));
+  const tl=$("#tally");tl.replaceChildren();
+  const t=(tallyData&&tallyData.tally)||{};
+  CATS.forEach(c=>{
+    const card=el("div","tcard");card.append(el("h4",null,c.n));
+    const rows=t[c.id]||[];
+    if(!rows.length)card.append(el("div","empty","Aún sin votos."));
+    const max=rows.length?rows[0].count:1;
+    rows.slice(0,5).forEach(r=>{const row=el("div","trow");row.append(el("span",null,r.name),el("strong",null,String(r.count)));
+      const tb=el("div","tb");const fill=document.createElement("b");fill.style.width=(r.count/max*100)+"%";tb.append(fill);row.append(tb);card.append(row);});
+    tl.append(card);
+  });
+  renderConfirm();
+}
+function renderConfirm(){
+  const cb=$("#confirmBox");cb.replaceChildren();if(!pendingAction){cb.hidden=true;return;}cb.hidden=false;
+  const msg={cerrada:status==="publicada"?"¿Ocultar los resultados? La votación quedará cerrada.":"¿Cerrar la votación? Nadie podrá votar ni cambiar su voto.",
+    abierta:"¿Reabrir la votación? Se ocultarán los resultados publicados.",
+    publicada:"¿Publicar resultados? Todos verán el top 3 de cada categoría con su número de votos."}[pendingAction];
+  const box=el("div","confirm");box.append(el("span",null,msg));
+  const yes=el("button","btn primary","Confirmar");yes.type="button";
+  yes.onclick=async()=>{const a=pendingAction;pendingAction=null;yes.disabled=true;
+    try{applyData(await call("setStatus",a));await loadTally();}catch(e){notice(errMsg(e));}renderAll();};
+  const no=el("button","btn","Cancelar");no.type="button";no.onclick=()=>{pendingAction=null;renderConfirm();};
+  box.append(yes,no);cb.append(box);
+}
+
+/* ---------- arranque ---------- */
+function applyData(d){
+  me=d.me||"";isAdmin=!!d.isAdmin;status=d.status||"abierta";
+  people=d.people||[];picks=d.myPicks||{};results=d.results||null;
+  if(!CATS.length){CATS=d.cats;buildFilters();buildCards();}
+}
+(async()=>{
+  try{
+    applyData(await call("getInitialData"));
+    if(!me)notice("No pudimos identificar tu cuenta. Entra con tu correo corporativo de Google para votar.");
+    renderAll();
+    if(isAdmin){loadTally();setInterval(()=>{if(!document.hidden)loadTally();},30000);}
+  }catch(e){notice("No se pudo cargar la votación: "+errMsg(e));$("#statusText").textContent="Sin conexión";}
+})();
+</script>
+</body>
+</html>
