@@ -25,7 +25,7 @@ Votación de los 12 reconocimientos **Los Dioses del Olimpo Smart Fit**. Cada pe
    - *Archivo › +  › HTML*, nómbralo `Index` y pega [`apps-script/Index.html`](apps-script/Index.html).
    - *Configuración del proyecto ›* activa “Mostrar el archivo de manifiesto `appsscript.json`” y pega [`apps-script/appsscript.json`](apps-script/appsscript.json).
 4. **Crea las hojas.** En el editor elige la función `setup` y pulsa *Ejecutar*. Acepta los permisos. Aparecerán las pestañas **Votos**, **Personas** y **Config**.
-5. **(Opcional) Carga la lista de personas.** En **Personas** pega Nombre, Correo y Área de los colaboradores. Así aparecen en el buscador y se evita contar a la misma persona con dos nombres distintos. Si la dejas vacía, la gente escribe el nombre libremente.
+5. **Carga la lista de personas.** En la pestaña **Votados** (o **Personas**) pega Nombre, Correo y Área. Al escribir, a cada votante le aparecen sugerencias de esa lista. Si agregas nombres, la página los toma sola en menos de un minuto, y si un votante escribe un nombre nuevo, se agrega solo a la lista con Origen "Agregado al votar".
 6. **Agrega organizadores.** En **Config**, fila `organizadores`, escribe los correos separados por coma.
 7. **Publica.** *Implementar › Nueva implementación › Aplicación web*:
    - Ejecutar como: **Yo**
